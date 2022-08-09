@@ -10,6 +10,7 @@ app.use(cors())
 
 
 app.use('/auth',require('./Routes/Authentication'));
+app.use('/payments',require('./Routes/Payments'));
 
 app.get('/', (req, res) => {
     res.send('Hello World!');

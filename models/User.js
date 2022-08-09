@@ -10,7 +10,12 @@ const {Schema} = mongoose;
           required:true,
           unique:true,
       },
-      password:{
+      user_address:{
+            type:String,
+            required:true,
+            unique:true,
+      },
+      phonenumber:{
           type:String,
           required:true,
       },

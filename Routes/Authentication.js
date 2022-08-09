@@ -5,9 +5,14 @@ const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
 const fetchuser = require('../Middleware/fetchuser');
+const fetch = require("node-fetch");
+const PaymentHistory = require('../models/PaymentHistory');
+const Units = require('../models/Units');
+
+
 
 const JWT_SECRET = 'SMARTRIC_017';
-router.post('/registeruser',[body('email', 'Enter a valid Email').isEmail(), body('password', 'Password must be of minimum 5 characters').isLength({ min: 5 }),body('meterid', 'Enter a correct Meter ID').isLength({ min: 4 })], async (req, res) => {
+router.post('/registeruser',[body('email', 'Enter a valid Email').isEmail(), body('phonenumber', 'Phone number is not valid').isLength({ min: 10 }),body('meterid', 'Enter a correct Meter ID').isLength({ min: 4 })], async (req, res) => {
     console.log(JWT_SECRET);
     
     try {
@@ -22,22 +27,41 @@ router.post('/registeruser',[body('email', 'Enter a valid Email').isEmail(), bod
             return (res.status(400).json({ "error": "User already exists! Please enter a valid email-address." }))
         }
         
-        const salt = await bcrypt.genSalt(10);
-        const secPass = await bcrypt.hash(req.body.password, salt);
+        
 
         user = await User.create({
             name: req.body.name,
             email: req.body.email,
-            password: secPass,
+            user_address: req.body.user_address,
+            phonenumber: req.body.phonenumber,
             meterid: req.body.meterid,
         })
+
+        const paymentschema = new PaymentHistory({
+            user: user.id,
+            meterid: req.body.meterid,
+            user_address: req.body.user_address,
+        });
+        const response = await paymentschema.save();
+        console.log(paymentschema);
+        console.log(response);
+        const unitsSchema = new Units({
+            user: user.id,
+            user_address: req.body.user_address,
+            previous_reading: 0,
+            current_reading: 0,
+            units_consumed: 0,
+            previous_month_bill_status: false,
+        });
+        const response1 = await unitsSchema.save();
+        console.log(unitsSchema);
+        console.log(response1);
         const data = {
             user: {
                 id: user.id
             }
         }
-        const authToken = jwt.sign(data, JWT_SECRET);
-        res.json({ "authToken": authToken });
+        res.json({ "message": "User registered successfully", "data": data });
     }
     catch (err) {
         console.error(err.message);
