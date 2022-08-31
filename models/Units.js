@@ -15,11 +15,6 @@ const UnitsSchema = new Schema({
         required: true,
         default:0,
     },
-    current_reading: {
-        type: Number,
-        required: true,
-        default:0,
-    },
     units_consumed: {
         type: Number,
         required: true,

@@ -49,7 +49,6 @@ router.post('/registeruser',[body('email', 'Enter a valid Email').isEmail(), bod
             user: user.id,
             user_address: req.body.user_address,
             previous_reading: 0,
-            current_reading: 0,
             units_consumed: 0,
             previous_month_bill_status: false,
         });
