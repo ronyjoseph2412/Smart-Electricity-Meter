@@ -69,19 +69,25 @@ router.post('/sendalert', async (req, res) => {
 // Logic for Sending Alerts to the User
 const d = new Date();
 let day = d.getDate();
-// day = 1;
-const month = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+// day = 5;
+const month = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 function check_should_alert() {
-    if (day === 20) {
-        console.log("Should alert User about the meter reading and alert them");
+    // 5th,7th,10th,11th cut down electricity
+    if (day == 5 || day == 7 || day == 10) {
+        console.log("Alert about the deadline of previous month bill")
+        return true;
+    }
+    if (day === 11) {
+        console.log("Should alert User about the meter reading and alert them and cut down electricity");
+
         return true;
     }
     else if (day === 30 || day === 31) {
         console.log("Should alert User about the deadline of payment");
         return true;
     }
-    else if(day === 1){
+    else if (day === 1) {
         console.log("Should alert User about the deadline of payment");
         return true;
     }
@@ -89,7 +95,7 @@ function check_should_alert() {
         console.log("Should not alert User");
         return false;
     }
-    
+
 }
 
 const unit_price = 8.00;
@@ -102,6 +108,8 @@ async function sendalert() {
             user.once('value', async function (snap) {
                 // Extracting Firebase data
                 const data = snap.val();
+                // console.log(user);
+                // console.log(data);
                 // Extracting User Units data from Mongodb
                 const units = await Units.findOne({ user_address: users[i].user_address });
                 console.log((data.meter_reading - units.previous_reading) + " " + users[i].phonenumber + " " + users[i].meterid);
@@ -112,72 +120,71 @@ async function sendalert() {
                 const units_consumed = data.meter_reading - units.previous_reading;
                 const current_month_bill = (data.meter_reading - units.previous_reading) * unit_price;
                 console.log(units.previous_month_bill_status)
-                if(day === 1 && units.previous_month_bill_status === false){
+                if ((day === 1 || day === 5 || day === 7 || day === 10) && units.previous_month_bill_status === false) {
                     console.log("Payment is not done for previous month");
-                    console.log(`Your Electricity Bill for the Month ${month[d.getMonth()-1]} is unpaid. The total amount due is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance}`);
+                    console.log(`Your Electricity Bill for the Month ${month[d.getMonth() - 1]} is unpaid. The total amount due is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance}`);
                     // Send WhatsApp Message to User
                     client.messages.create({
-                        body: `Your Electricity Bill for the Month ${month[d.getMonth()-1]} is unpaid. The total amount due is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance}`,
+                        body: `Your Electricity Bill for the Month ${month[d.getMonth() - 1]} is unpaid. The total amount due is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance}`,
                         from: 'whatsapp:+14155238886',
                         to: 'whatsapp:+91' + users[i].phonenumber
                     }).then(message => console.log(message.sid)).done();
                 }
-                if(day === 20 && units.previous_month_bill_status === false){
+                if (day === 11 && units.previous_month_bill_status === false) {
                     console.log("Payment is not done for previous month");
-                    console.log(`Your Electricity Bill for the Month ${month[d.getMonth()-1]} is unpaid. The total amount due is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance}.Please note that the total amount includes the previous month bill and partly payment of the current month bill.`);
+                    console.log(`Your Electricity Bill for the Month ${month[d.getMonth() - 1]} is unpaid. The total amount due is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance}.Please note that the total amount includes the previous month bill and partly payment of the current month bill.Your electricity will be cut down today if the payment is not done.`);
                     // Send WhatsApp Message to User
-                    client.messages.create({
-                        body: `Your Electricity Bill for the Month ${month[d.getMonth()-1]} is unpaid. The total amount due is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance}`,
-                        from: 'whatsapp:+14155238886',
-                        to: 'whatsapp:+91' + users[i].phonenumber
-                    }).then(message => console.log(message.sid)).done();
-                }
-                if (day === 30 || day === 31) { 
-                // Calculation of Bill  
-                
-
-                // If Wallet Balance is more than required Amount the Wallet amount is used to pay the bill
-                console.log(Payment_History);
-                console.log(Payment_History.current_wallet_balance);
-                if (Payment_History.current_wallet_balance - current_month_bill >= 0) {
-                    // console.log("Wallet Balance is more than required Amount");
-                    // console.log("Payment is done from your Wallet");
-                    // console.log("Current Wallet Balance", Payment_History.current_wallet_balance - current_month_bill);
-                    // console.log("Current Month Bill", current_month_bill);
-                    // console.log("Current Month Units Consumed", (data.meter_reading - units.previous_reading));
-                    // Update the current wallet balance in MongoDB
-                    PaymentHistory.findByIdAndUpdate(Payment_History._id, { current_wallet_balance: Payment_History.current_wallet_balance - current_month_bill }, function (err, doc) {
-                        if (err) {
-                            console.log("Something wrong when updating data!");
-                        }
-                        console.log(doc);
+                    // set firebase switch to 0
+                    db.ref(`/${users[i].user_address}`).update({
+                        switch_state: 0
                     });
-                    
-                    Units.findByIdAndUpdate(units._id, { previous_reading: data.meter_reading,units_consumed:units_consumed,previous_month_bill_status: true }, function (err, doc) {
-                        if (err) {
-                            console.log("Something wrong when updating data!");
-                        }
-                        console.log(doc);
-                    })
-                    console.log(`Your Electricity Bill for the Month ${month[d.getMonth()]} is paid using your Wallet. The total amount paid is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance - current_month_bill}`);
-                    // Send Whatsapp Notification to User
-                    // client.messages.create({
-                    //     from: 'whatsapp:+14155238886',
-                    //     body: `Your Electricity Bill for the Month ${month[d.getMonth]} is paid using your Wallet. The total amount paid is ${current_month_bill} for the consumption associated with the meter-id ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance - current_month_bill}`,
-                    //     to: `whatsapp:+91${users[i].phonenumber}`
-                    // }).then(message => console.log(message.sid)).done();
+                    client.messages.create({
+                        body: `Your Electricity Bill for the Month ${month[d.getMonth() - 1]} is unpaid. The total amount due is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance}`,
+                        from: 'whatsapp:+14155238886',
+                        to: 'whatsapp:+91' + users[i].phonenumber
+                    }).then(message => console.log(message.sid)).done();
                 }
-                else{
-                    console.log("Wallet Balance is less than required Amount");
-                    Units.findByIdAndUpdate(units._id, { previous_month_bill_status: false }, function (err, doc) {
-                        if (err) {
-                            console.log("Something wrong when updating data!");
-                        }
-                        console.log(doc);
-                    })
-                    console.log(`Your Electricity Bill for the Month ${month[d.getMonth()]} is unpaid. The total amount due is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance}`);
+                if (day === 30 || day === 31) {
+                    // Calculation of Bill  
+
+
+                    // If Wallet Balance is more than required Amount the Wallet amount is used to pay the bill
+                    console.log(Payment_History);
+                    console.log(Payment_History.current_wallet_balance);
+                    if (Payment_History.current_wallet_balance - current_month_bill >= 0) {
+                        // Update the current wallet balance in MongoDB
+                        PaymentHistory.findByIdAndUpdate(Payment_History._id, { current_wallet_balance: Payment_History.current_wallet_balance - current_month_bill }, function (err, doc) {
+                            if (err) {
+                                console.log("Something wrong when updating data!");
+                            }
+                            console.log(doc);
+                        });
+
+                        Units.findByIdAndUpdate(units._id, { previous_reading: data.meter_reading, units_consumed: units_consumed, previous_month_bill_status: true }, function (err, doc) {
+                            if (err) {
+                                console.log("Something wrong when updating data!");
+                            }
+                            console.log(doc);
+                        })
+                        console.log(`Your Electricity Bill for the Month ${month[d.getMonth()]} is paid using your Wallet. The total amount paid is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance - current_month_bill}`);
+                        // Send Whatsapp Notification to User
+                        // client.messages.create({
+                        //     from: 'whatsapp:+14155238886',
+                        //     body: `Your Electricity Bill for the Month ${month[d.getMonth]} is paid using your Wallet. The total amount paid is ${current_month_bill} for the consumption associated with the meter-id ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance - current_month_bill}`,
+                        //     to: `whatsapp:+91${users[i].phonenumber}`
+                        // }).then(message => console.log(message.sid)).done();
+                    }
+                    else {
+                        console.log("Wallet Balance is less than required Amount");
+                        Units.findByIdAndUpdate(units._id, { previous_month_bill_status: false }, function (err, doc) {
+                            if (err) {
+                                console.log("Something wrong when updating data!");
+                            }
+                            console.log(doc);
+                        })
+                        console.log(`Your Electricity Bill for the Month ${month[d.getMonth()]} is unpaid. The total amount due is ${current_month_bill} for the consumption associated with the ${users[i].meterid} and the units consumed are ${units_consumed}.The current wallet balance is ${Payment_History.current_wallet_balance}`);
+                    }
                 }
-            }
                 // if (user) {
                 //     client.messages.create({
                 //         from: 'whatsapp:+14155238886',
@@ -187,8 +194,8 @@ async function sendalert() {
                 // }
             }
             )
+        }
     }
-}
 }
 
 

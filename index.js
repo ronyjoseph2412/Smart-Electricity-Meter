@@ -3,6 +3,7 @@ connecttodb()
 const express = require('express');
 let cors = require('cors');
 const app = express();
+const fetch = require('node-fetch');
 
 // var cors = require('cors')
 app.use(express.json())
@@ -20,6 +21,7 @@ app.get('/', (req, res) => {
 // setInterval(function() {
 //     console.log('Hey there')
 //   }, 1000)
+
 
 app.listen((process.env.PORT || 5000), () => {
     console.log('Server is running on port 5000');

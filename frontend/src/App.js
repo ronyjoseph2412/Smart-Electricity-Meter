@@ -5,6 +5,7 @@ import Navbar from "./components/Navbar";
 import Registration from "./components/Registration";
 import Payments from "./components/Payments";
 import PaymentHistory from "./components/PaymentHistory";
+import Home from "./components/Home";
 
 function App() {
   return (
@@ -13,6 +14,8 @@ function App() {
       <Router>
         <Navbar />
         <Routes>
+
+          <Route path="/" element={<><Home /></>} />
           <Route path="/registration" element={<><Registration /></>} />
           <Route path="/payments" element={<><Payments /></>} />
           <Route path="/payment-history" element={<><PaymentHistory /></>} />
