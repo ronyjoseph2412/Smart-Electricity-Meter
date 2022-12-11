@@ -22,13 +22,13 @@ contract SmartElectricity is ChainlinkClient{
     uint256 private fee;
 
     address payable public contract_owner;
-    address payable government;
+    address payable public government;
     address current_user;
 
     uint ContractBalanceWithoutCompound;
     uint price_per_unit;
 
-    cETH cToken = cETH(0xd6801a1DfFCd0a410336Ef88DeF4320D6DF1883e); // Rinkeby
+    cETH cToken = cETH(0x64078a6189Bf45f80091c6Ff2fCEe1B15Ac8dbde); // Goerli
 
     struct User{
         uint wallet;
@@ -46,8 +46,8 @@ contract SmartElectricity is ChainlinkClient{
     constructor(){
         contract_owner = payable(msg.sender);
         government = payable(0xbDdBd8eA4A33C3bcb7451c9a2e14DaE571cD25dA);
-        setChainlinkToken(0x01BE23585060835E02B77ef475b0Cc51aA1e0709);
-        setChainlinkOracle(0xf3FBB7f3391F62C8fe53f89B41dFC8159EE9653f);
+        setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB);
+        setChainlinkOracle(0xCC79157eb46F5624204f47AB42b3906cAA40eaB7);
         jobId = 'ca98366cc7314957b8c012c72f05aeeb';
         fee = (1 * LINK_DIVISIBILITY) / 10;
     }
@@ -59,8 +59,9 @@ contract SmartElectricity is ChainlinkClient{
 
     // Chainlink
     function requestUnitsData(string memory _path) public returns (bytes32 requestId) {
+        current_user = msg.sender;
         Chainlink.Request memory req = buildChainlinkRequest(jobId, address(this), this.fulfill.selector);
-        req.add('get', 'https://db-rony.herokuapp.com/');
+        req.add('get', 'https://calm-garters-eel.cyclic.app/');
         req.add('path', _path);
         int256 timesAmount = 1;
         req.addInt('times', timesAmount);
@@ -71,6 +72,7 @@ contract SmartElectricity is ChainlinkClient{
         emit RequestUnits(_requestId, _units);
         mapUser[current_user].units = _units;
         mapUser[current_user].allUnits.push(_units);
+        mapUser[current_user].amount_to_pay = mapUser[current_user].units*price_per_unit;
     }
 
     function withdrawLink() public {
