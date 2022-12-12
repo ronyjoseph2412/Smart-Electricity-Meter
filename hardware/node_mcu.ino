@@ -1,13 +1,14 @@
 #include <ESP8266WiFi.h>
 #include <FirebaseArduino.h>
 
-int relayInput = 2;
+int isState = 0;
 
 // Set these to run example.
-#define FIREBASE_HOST "minor-aa5fb-default-rtdb.firebaseio.com"
-#define FIREBASE_AUTH "DatZHXIVe5TmI1YSj7pFq6pdC1EHs1Lim3Ob0fVD"
-#define WIFI_SSID "Mysterio_Guest"
+#define FIREBASE_HOST "endsem-34719-default-rtdb.firebaseio.com"
+#define FIREBASE_AUTH "i9QZadjF0KMozXHWcvH5M4uPGj6khCd1Yf1TIu2V"
+#define WIFI_SSID "Mysterio_Guest"                
 #define WIFI_PASSWORD "Mysterio_017"
+#define STATE D8     
 
 void setup() {
   Serial.begin(9600);
@@ -26,42 +27,48 @@ void setup() {
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 
   // Relay Setup
-  pinMode(relayInput, OUTPUT); // initialize pin as OUTPUT
+  pinMode(STATE, OUTPUT); // initialize pin as OUTPUT
 }
 
 int n = 0;
 
 void loop() {
-  // set value
-  Firebase.setFloat("0xE6707721ad79f4519f80D95ef4D961b60893CD76/meter_reading", n);
-  // handle error
-  if (Firebase.failed()) {
-      Serial.print("setting /number failed:");
-      Serial.println(Firebase.error());  
-      return;
+
+//  // handle error
+//  if (Firebase.failed()) {
+//      Serial.print("setting /number failed:");
+//      Serial.println(Firebase.error());  
+//      return;
+//  }
+  
+  if(Firebase.getInt("0xE6707721ad79f4519f80D95ef4D961b60893CD76/switch_state")==1){
+    isState = Firebase.getInt("0xE6707721ad79f4519f80D95ef4D961b60893CD76/switch_state");
+    Serial.println("isState: ");
+    Serial.println(isState);
+    // turn relay on
+    digitalWrite(STATE, HIGH);
+    Serial.println("ELECTRICITY ON");
+    // set value
+    Firebase.setFloat("0xE6707721ad79f4519f80D95ef4D961b60893CD76/meter_reading", n);
+    // Add 1 to n
+    n++;
+  }
+  else{
+    isState = Firebase.getInt("0xE6707721ad79f4519f80D95ef4D961b60893CD76/switch_state");
+    Serial.println("isState: ");
+    Serial.println(isState);
+    // turn relay off
+    digitalWrite(STATE, LOW); 
+    Serial.println("ELECTRICITY OFF");
   }
 
   // get value 
   Serial.print("meter_reading: ");
-  Serial.println(Firebase.getFloat("0xE6707721ad79f4519f80D95ef4D961b60893CD76/meter_reading"));
-
-  // Add 1 to n
-  n++;
+  Serial.println(Firebase.getInt("0xE6707721ad79f4519f80D95ef4D961b60893CD76/meter_reading"));
   
   // get value
   Serial.print("switch_state: ");
   Serial.println(Firebase.getInt("0xE6707721ad79f4519f80D95ef4D961b60893CD76/switch_state"));
 
-  // Relay Setup
-
-  if(Firebase.getInt("0xE6707721ad79f4519f80D95ef4D961b60893CD76/switch_state")==0){
-    digitalWrite(relayInput, LOW); // turn relay off
-    Serial.println("OFF");
-  }
-  else if(Firebase.getInt("0xE6707721ad79f4519f80D95ef4D961b60893CD76/switch_state")==1){
-    digitalWrite(relayInput, HIGH); // turn relay on
-    Serial.println("ON"); 
-  }
-
-  delay(1000);
+  delay(10000);
 }
